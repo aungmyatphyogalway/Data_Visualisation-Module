@@ -1,0 +1,281 @@
+---
+title: "DataVisualisationAssignment2"
+author: "aungmyatphyo22221184"
+date: "2023-03-14"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(sf)
+library(dplyr)
+library(lubridate)
+library(scales)
+library(ggplot2)
+library(tidyr)
+library(colorspace)
+library(colorblindr)
+
+setwd("~/Downloads")
+file1<-"/Users/aungphyo/Downloads/DV2/CovidCountyStatisticsIreland_v2.shp"
+IRL_counties_Covid19 <- st_read(file1, quiet = TRUE)
+
+#filter the data of all counties on 2021,12,21
+#normalize DailyCCase and Confirmed C columns per 100,000 population
+q1<- IRL_counties_Covid19%>%
+  filter(TimeStamp == ymd("2021-12-21"))%>%
+  mutate(ConfirmedC_per_100k =  round(100000  * ConfirmedC/Population,1))%>%
+  mutate(DailyCCase_per_100k =  round(100000  * DailyCCase/Population, 1))
+
+#colour variable
+cb<-desaturate(palette_OkabeIto,0.25)
+cb1<-cb[c(1,2)]
+#new variable for difference colour between galway and others
+Counties=c('Other','Other','Other','Other','Other',
+           'Other','Galway','Other','Other','Other',
+           'Other','Other','Other','Other','Other','Other',
+           'Other','Other','Other','Other','Other','Other',
+           'Other','Other','Other','Other')
+#bind a new variable Counties column to q1 dataframe
+q1<-cbind(q1,Counties)
+
+q11<-ggplot(q1,
+            #order by ascending value of confirmedC per 100k value
+            aes(x=reorder(CountyName,ConfirmedC_per_100k),
+                y=ConfirmedC_per_100k,color=Counties))+
+  geom_point(size=3.5)+
+  ggtitle('Cumulative Cases per 100k population per county on 21st Dec 2021 ')
+
+q11<-q11+theme(panel.spacing = unit(1,'lines'))
+
+#change the y label name and discard x label
+q11<-q11+xlab('')+
+  ylab('Cumulative no of cases per 100,000 population')
+
+#change the scales of y axis and add comma after 3 digits
+q11<-q11+scale_y_continuous(breaks = seq(10000,19000,by=1000),
+                            limits = c(10000,19000),
+                            labels = comma)
+
+q11<-q11+scale_fill_manual(values=cb1)
+
+#theme
+q11<-q11+theme_bw()+theme(
+  panel.background = element_rect(fill = "white"),
+  panel.grid.major = element_line(size = 0.1, 
+                                  linetype = 'solid',
+                                  colour = "lightgrey"), 
+  #remove x axis major grid line
+  panel.grid.major.x = element_blank(),
+  panel.grid.minor = element_line(size = 0.075, 
+                                  linetype = 'solid',
+                                  colour = "lightgrey"),
+  #reduce the text size of x and angle into 30
+  axis.text.x = element_text(angle=30,vjust=1,hjust=1,size=6),
+  #bold the title name
+  plot.title = element_text(face='bold',size=9),
+  axis.title.y = element_text(size=7),
+  axis.line.y = element_blank(), 
+  axis.line.x = element_blank(), 
+  panel.border = element_blank()
+ )
+
+
+q11
+```
+
+For question 1, my hand drawing graph & ggplot graph are similar. Firstly, there is a difference in y-axis scale upper limits (19000) to cover highest data points and text style from 10k to 10,000. In ggplot graph, there are major and minor y axis grid lines which means easier to read the data. For colour, colour blind package is adapted for considering about the people with colour problem. For legend, Counties is described as legend title and 2 categories such as Galway and other which will help the reader for better understanding this graph. Finally, the plot title is modified.
+
+
+
+
+
+
+```{r}
+library(sf)
+library(dplyr)
+library(lubridate)
+library(scales)
+library(ggplot2)
+library(tidyr)
+library(colorspace)
+library(colorblindr)
+
+setwd("~/Downloads")
+file1<-"/Users/aungphyo/Downloads/DV2/CovidCountyStatisticsIreland_v2.shp"
+IRL_counties_Covid19 <- st_read(file1, quiet = TRUE)
+
+#filter the data of all counties on 2021,12,21
+#normalize DailyCCase and Confirmed C columns per 100,000 population
+q2<- IRL_counties_Covid19%>%
+  filter(TimeStamp == ymd("2021-12-21"))%>%
+  mutate(ConfirmedC_per_100k =  round(100000  * ConfirmedC/Population,1))%>%
+  mutate(DailyCCase_per_100k =  round(100000  * DailyCCase/Population, 1))
+
+#colour variable
+cb<-desaturate(palette_OkabeIto,0.25)
+cb1<-cb[c(1,2)]
+
+#mean value of ConfirmedC per 100k column
+m<-mean(q2$ConfirmedC_per_100k)
+#mean 13528.98
+
+#to differ the colours among below the mean counties,
+#above the mean counties and galway (3 colours)
+mm<-c('a','a','b','b','a','a','g','b','a',
+      'b','b','b','a','a','a','b','a','a',
+      'b','b','b','b','a','a','b','b')
+#bind new variable mm column to dataframe q2
+q2<-cbind(q2,mm)
+
+
+q22<-ggplot(q2,
+            #order by ascending values of ConfirmedC per 100k value
+            aes(x=reorder(CountyName,ConfirmedC_per_100k),
+               y=ConfirmedC_per_100k,colour=mm))+
+  #draw a mean horizontal line by colour dark blue
+  geom_hline(yintercept = m, 
+             linetype="solid",
+             size=0.2,
+             colour='#00008B')+
+  #to show divergence from mean horizontal line
+  geom_segment(aes(x=reorder(CountyName,ConfirmedC_per_100k),
+                   y=m,
+                   xend=CountyName, 
+                   yend=ConfirmedC_per_100k),
+               size=0.3,
+               show.legend = FALSE)+
+  geom_point(size=2)+
+  #title name
+  ggtitle("Divergence from mean cumulative cases per 100k on 21st,Dec,2021")+
+  #caption explanation
+  labs(caption = "horizontal dark blue line represents mean number of cases (13528.98)")
+  
+
+#adding manual color and labels
+q22<-q22+scale_colour_manual(values= c("#32cd32","#ce5a6c","212f85"), 
+                             name = "",
+                      labels = c("Above_the_mean","Below_the_mean","Galway")) 
+#theme
+q22<-q22+theme(panel.spacing = unit(1,'lines'))+
+  #remove x label
+  xlab('')+
+  #change y label name
+  ylab('Cumulative no of cases per 100,000 population')+
+  #change the scales of y axis and add comma after 3 digits
+  scale_y_continuous(breaks = seq(10000,19000,
+                                  by=1000),
+                     limits = c(10000,19000),
+                     labels = comma)+
+  theme_bw()+theme(
+    panel.background = element_rect(fill = "white"),
+    panel.grid.major = element_line(size = 0.1, 
+                                    linetype = 'solid',
+                                    colour = "lightgrey"),
+    #remove x axis major grid line
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_line(size = 0.075, 
+                                    linetype = 'solid',
+                                    colour = "lightgrey"),
+    #reduce the text size of x and angle into 30
+    axis.text.x = element_text(angle=30,
+                               vjust=1,
+                               hjust=1,
+                               size=6),
+    #bold the title name
+    plot.title = element_text(face='bold',
+                              size=9),
+    axis.title.y = element_text(size=7),
+    axis.line.y = element_blank(), 
+    axis.line.x = element_blank(), 
+    panel.border = element_blank()
+  )
+  
+q22
+```
+
+For question2, both graphs are similar. Firstly, there is a difference in y-axis scale upper limits (19000) to cover highest data points and text style from 10k to 10,000. In ggplot graph, there are major and minor y axis grid lines which means easier to read the data. The solid dark blue mean line is drawn rather than dotted ones and green colour for above the mean counties, red for below the mean counties and blue for galway is applied. Each dot means individual values and vertical sticks in the lollipop plot describes how much to differ from the mean value. Moreover, a legend is added and there is a caption about mean line below the graph. These features will provide better visualisation. Finally, the plot title is modified.
+
+
+
+
+
+```{r}
+library(sf)
+library(dplyr)
+library(lubridate)
+library('ggplot2')
+library('tidyr')
+library(scales)
+
+setwd("~/Downloads")
+file1<-"/Users/aungphyo/Downloads/DV2/CovidCountyStatisticsIreland_v2.shp"
+IRL_counties_Covid19 <- st_read(file1, quiet = TRUE)
+
+#filter the County Wicklow data
+county<-subset(IRL_counties_Covid19,CountyName=="Wicklow")
+#filter the 18th week duration between 1st Jan 2021 to 6th May 2021
+Wicklow<- county%>%
+  filter(TimeStamp >=as.Date('2021-01-01')& TimeStamp<=as.Date('2021-05-06'))
+
+
+#plot with x axis timestamp and y axis DailyCCase
+q3<-ggplot(data =Wicklow, aes(x =TimeStamp, y = DailyCCase)) +
+  #daily data during 18th week
+  geom_point(alpha = 0.2, colour='red',
+             size = 1,
+             na.rm = TRUE) +
+  #title
+  ggtitle('Daily Number of Confirmed Cases in County Wicklow over a 18-week period')+
+  #explain 18th week duration
+  labs(caption = "18th weeks are from 1st,Jan,2021 to 6th,May,2021")
+
+#change y label and discard X label
+q3<-q3+labs(x = " ", 
+            y = "Daily Covid Case")
+
+#change x label into week and breaks as 1 week
+q3<-q3+scale_x_date(
+  name = 'Week',
+  breaks = "1 week",
+  labels = date_format("%W"),
+  expand = c(0.01, 0))
+
+#to show trends, draw the blue line
+q3<-q3+geom_line(color = "blue", 
+                 size = .5) 
+
+q3<-q3+theme(panel.spacing = unit(1,'lines'))
+
+#change the y scales
+q3<-q3+scale_y_continuous(breaks = seq(0,140,
+                                       by=10),
+                          limits = c(0,142))
+
+#theme
+q3<-q3+theme_bw()+theme(
+  panel.background = element_rect(fill = "white"),
+  panel.grid.major = element_line(size = 0.1, 
+                                  linetype = 'solid',
+                                  colour = "lightgrey"), 
+  panel.grid.minor = element_line(size = 0.075, 
+                                  linetype = 'solid',
+                                  colour = "lightgrey"),
+  #remove minor x and y grid lines
+  panel.grid.minor.y = element_blank(),
+  panel.grid.minor.x = element_blank(),
+  #bold the title
+  plot.title = element_text(face='bold',
+                            size=9),
+  axis.title.x = element_text(size=7),
+  axis.title.y = element_text(size=7),
+  axis.line.y = element_blank(), 
+  axis.line.x = element_blank(), 
+  panel.border = element_blank())
+
+q3  
+```
+
+
+For question 3, both graphs are similar. Firstly, y-axis upper limit scales is changed into 140 and x-axis scales are described as 1,2,3 and x-axis label is as Week. In ggplot graph, smoothing process is not applied because the data is not too big or too complexed for smoothing. Major gridlines of x-axis and y-axis are applied for better visualisation. For colour, line is drawn as blue and dots on each data is as red. In these difference colour, blue line shows the trend and each red dots serve as the individual data value. Finally, the plot title is modified and a caption is added to mention about the 18th week period.
